@@ -33,6 +33,127 @@
   min-height: 0;
 }
 
+/* Mobile/small screen layout: tools at top, card header above viewbox, no scroll */
+@media (max-width: 900px) {
+  .stacking-view {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-desktop,
+  .stacking-controls-desktop {
+    display: none !important;
+  }
+
+  .mobile-tools-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border, #ddd);
+    gap: 1rem;
+  }
+
+  .mobile-tools-bar .toolbar-row {
+    flex: 1;
+  }
+
+  .mobile-tools-title {
+    font-size: 1.125rem;
+    font-weight: bold;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .mobile-tools-title .header-ir {
+    color: #e63946;
+  }
+
+  .stacking-layout {
+    flex: 1;
+    min-height: 0;
+    max-height: calc(100dvh - 4rem);
+    overflow: hidden;
+    display: flex;
+  }
+
+  .stacking-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    margin-right: 0;
+    overflow: hidden;
+  }
+
+  .stacking-canvas-wrap {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stacking-resize-handle {
+    display: none;
+  }
+
+  .stacking-sidebar {
+    flex-shrink: 0;
+    align-self: stretch;
+    min-width: 140px;
+    max-width: 40%;
+    max-height: 100%;
+  }
+
+  .reference-scale-bar {
+    flex-shrink: 0;
+    padding: 0.35rem 0;
+    font-size: 0.75rem;
+  }
+
+  .reference-scale-bar .y-min-adjust {
+    flex-wrap: wrap;
+  }
+
+  .stacking-sidebar {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .spectra-list,
+  .archive-list {
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-tabs {
+    margin-bottom: 0.3rem;
+  }
+
+  .sample-library-modal {
+    max-height: 90dvh;
+    width: 95vw;
+    min-width: 0;
+  }
+}
+
+/* Desktop: hide mobile tools */
+@media (min-width: 901px) {
+  .mobile-tools-bar {
+    display: none !important;
+  }
+}
+
 .stacking-view .header {
   margin-bottom: 0.75rem;
   flex-shrink: 0;
@@ -131,6 +252,89 @@
   background: #ffffff;
 }
 
+.touch-hint-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.75rem 1.25rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 55;
+}
+
+/* Touch-only region adjust UI */
+.touch-region-adjust {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 60;
+}
+
+.touch-region-adjust-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.touch-region-adjust-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-width: 40px;
+}
+
+.touch-region-adjust-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font-size: 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.touch-region-adjust-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.touch-region-adjust-btn:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.touch-region-adjust-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.touch-region-adjust-confirm,
+.touch-region-adjust-cancel {
+  flex: 1;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .stacking-canvas,
 .spectrum-data-display {
   display: block;
@@ -177,10 +381,12 @@
   font-size: 0.8125rem;
 }
 
-.archive-list {
+.archive-list,
+.spectra-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .archive-empty {
@@ -725,7 +931,8 @@
 .sample-library-list {
   flex: 1;
   overflow-y: auto;
-  min-height: 160px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sample-library-list-header {
