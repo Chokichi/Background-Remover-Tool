@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import { useStacking } from '../context/StackingContext'
 import {
@@ -600,6 +599,12 @@ export default function StackingView() {
   const [debugCursor, setDebugCursor] = useState(null)
   const [tool, setTool] = useState('zoom')
   const [activeSpectrumId, setActiveSpectrumId] = useState(null)
+  const touchPoint1Ref = useRef(null)
+  const [touchPoint1Wavenumber, setTouchPoint1Wavenumber] = useState(null)
+  const [touchFirstPointPlaced, setTouchFirstPointPlaced] = useState(false)
+  const [touchDraft, setTouchDraft] = useState(null)
+  const [touchRegionAdjustMode, setTouchRegionAdjustMode] = useState(false)
+  const REGION_ADJUST_STEP = 5
   const [expandedPeakListId, setExpandedPeakListId] = useState(null)
   const [selectedPeakIndices, setSelectedPeakIndices] = useState({}) // { [spectrumId]: Set<number> }
   const [collapsedPeakGroups, setCollapsedPeakGroups] = useState(new Set()) // Set of 'spectrumId-groupId'
@@ -926,83 +931,168 @@ export default function StackingView() {
     }
   }, [zoomRange, displayHeight])
 
-  const handleCanvasMouseDown = useCallback((e) => {
-    if (calibrationMode) return
-    if (hasDataOnly) {
-      if (tool === 'zoom') {
-        const w = clientToWavenumber(e.clientX)
-        if (w != null) setDragSelect({ x1: w, x2: w })
-      } else if ((tool === 'peak' || tool === 'region') && activeSpectrumId) {
-        const w = clientToWavenumber(e.clientX)
-        if (w != null) setDragSelect({ x1: w, x2: w })
+  const getXFromClient = useCallback(
+    (clientX, clientY) => {
+      if (hasDataOnly) return clientToWavenumber(clientX)
+      const coords = clientToBufferCoords(clientX, clientY)
+      return coords?.x ?? null
+    },
+    [hasDataOnly, clientToWavenumber, clientToBufferCoords]
+  )
+
+  const commitSelection = useCallback(
+    (left, right, clearDrag = true) => {
+      const width = right - left
+      if (width >= 5) {
+        if (hasDataOnly) {
+          if (tool === 'zoom') {
+            setZoomRange({
+              xMin: Math.max(TARGET_WAVENUMBER_MIN, left),
+              xMax: Math.min(TARGET_WAVENUMBER_MAX, right),
+            })
+          } else if (tool === 'peak' && activeSpectrumId) {
+            const spec = spectra.find((s) => s.id === activeSpectrumId)
+            if (spec?.data?.x?.length) {
+              const minima = findLocalMinima(spec.data.x, spec.data.y, left, right)
+              if (minima.length > 0) {
+                const existing = spec.peaks ?? []
+                const newPeaks = minima.map((m) => ({ wavenumber: m.wavenumber, groupId: null, label: '' }))
+                updateSpectrum(activeSpectrumId, { peaks: [...existing, ...newPeaks] })
+              }
+            }
+          } else if (tool === 'region' && activeSpectrumId) {
+            const existing = spectra.find((s) => s.id === activeSpectrumId)?.regions ?? []
+            const newRegion = {
+              id: crypto.randomUUID(),
+              wavenumberMin: left,
+              wavenumberMax: right,
+              label: '',
+            }
+            updateSpectrum(activeSpectrumId, { regions: [...existing, newRegion] })
+          }
+        } else if (tool === 'zoom') {
+          const buf = fullBufferRef.current
+          if (buf) {
+            setZoomRange({
+              xMin: Math.max(0, left),
+              xMax: Math.min(buf.width, right),
+            })
+          }
+        }
       }
-    } else if (tool === 'zoom') {
-      const coords = clientToBufferCoords(e.clientX, e.clientY)
-      if (coords) setDragSelect({ x1: coords.x, x2: coords.x })
-    }
-  }, [calibrationMode, clientToBufferCoords, clientToWavenumber, hasDataOnly, tool, activeSpectrumId])
+      if (clearDrag) {
+        setDragSelect(null)
+        setTouchRegionAdjustMode(false)
+      }
+    },
+    [hasDataOnly, tool, activeSpectrumId, spectra, updateSpectrum]
+  )
 
-  const handleCanvasMouseMove = useCallback((e) => {
-    if (!dragSelect) return
-    if (hasDataOnly) {
-      const w = clientToWavenumber(e.clientX)
-      if (w != null) setDragSelect((prev) => ({ ...prev, x2: w }))
-    } else {
-      const coords = clientToBufferCoords(e.clientX, e.clientY)
-      if (coords) setDragSelect((prev) => ({ ...prev, x2: coords.x }))
-    }
-  }, [dragSelect, clientToBufferCoords, clientToWavenumber, hasDataOnly])
+  const handleCanvasPointerDown = useCallback(
+    (e) => {
+      if (calibrationMode) return
+      const isTouch = e.pointerType === 'touch'
+      if (isTouch) e.preventDefault()
 
-  const handleCanvasMouseUp = useCallback(() => {
-    if (!dragSelect) return
-    const { x1, x2 } = dragSelect
-    const left = Math.min(x1, x2)
-    const right = Math.max(x1, x2)
-    const width = right - left
-    if (width >= 5) {
-      if (hasDataOnly) {
-        if (tool === 'zoom') {
-          setZoomRange({
-            xMin: Math.max(TARGET_WAVENUMBER_MIN, left),
-            xMax: Math.min(TARGET_WAVENUMBER_MAX, right),
-          })
-        } else if (tool === 'peak' && activeSpectrumId) {
-          const spec = spectra.find((s) => s.id === activeSpectrumId)
-          if (spec?.data?.x?.length) {
-            const minima = findLocalMinima(spec.data.x, spec.data.y, left, right)
-            if (minima.length > 0) {
-              const existing = spec.peaks ?? []
-              const newPeaks = minima.map((m) => ({ wavenumber: m.wavenumber, groupId: null, label: '' }))
-              updateSpectrum(activeSpectrumId, { peaks: [...existing, ...newPeaks] })
+      const x = getXFromClient(e.clientX, e.clientY)
+      if (x == null) return
+
+      if (isTouch) {
+        if (touchRegionAdjustMode) return
+        if (touchPoint1Ref.current === null) {
+          setTouchDraft({ x, isFirst: true })
+        } else {
+          setTouchDraft({ x, isFirst: false })
+        }
+      } else {
+        if (hasDataOnly && (tool === 'zoom' || ((tool === 'peak' || tool === 'region') && activeSpectrumId))) {
+          setDragSelect({ x1: x, x2: x })
+        } else if (!hasDataOnly && tool === 'zoom') {
+          setDragSelect({ x1: x, x2: x })
+        }
+      }
+    },
+    [
+      calibrationMode,
+      getXFromClient,
+      touchRegionAdjustMode,
+      tool,
+      hasDataOnly,
+      activeSpectrumId,
+    ]
+  )
+
+  const handleCanvasPointerMove = useCallback(
+    (e) => {
+      if (e.pointerType === 'touch') {
+        if (touchDraft) {
+          const x = getXFromClient(e.clientX, e.clientY)
+          if (x != null) setTouchDraft((prev) => prev ? { ...prev, x } : null)
+        }
+        return
+      }
+      if (!dragSelect) return
+      const x = getXFromClient(e.clientX, e.clientY)
+      if (x != null) setDragSelect((prev) => ({ ...prev, x2: x }))
+    },
+    [dragSelect, touchDraft, getXFromClient]
+  )
+
+  const handleCanvasPointerUp = useCallback(
+    (e) => {
+      if (e.pointerType === 'touch') {
+        if (touchRegionAdjustMode) return
+        if (touchDraft) {
+          const { x, isFirst } = touchDraft
+          setTouchDraft(null)
+          if (isFirst) {
+            touchPoint1Ref.current = x
+            setTouchPoint1Wavenumber(x)
+            setTouchFirstPointPlaced(true)
+          } else {
+            const x1 = touchPoint1Ref.current
+            if (x1 != null) {
+              touchPoint1Ref.current = null
+              setTouchPoint1Wavenumber(null)
+              setTouchFirstPointPlaced(false)
+              const left = Math.min(x1, x)
+              const right = Math.max(x1, x)
+              if (tool === 'region' && hasDataOnly && activeSpectrumId) {
+                setDragSelect({ x1: left, x2: right })
+                setTouchRegionAdjustMode(true)
+              } else {
+                commitSelection(left, right)
+              }
             }
           }
-        } else if (tool === 'region' && activeSpectrumId) {
-          const existing = spectra.find((s) => s.id === activeSpectrumId)?.regions ?? []
-          const newRegion = {
-            id: crypto.randomUUID(),
-            wavenumberMin: left,
-            wavenumberMax: right,
-            label: '',
-          }
-          updateSpectrum(activeSpectrumId, { regions: [...existing, newRegion] })
         }
-      } else if (tool === 'zoom') {
-        const buf = fullBufferRef.current
-        if (buf) {
-          setZoomRange({
-            xMin: Math.max(0, left),
-            xMax: Math.min(buf.width, right),
-          })
-        }
+        return
+      }
+      if (!dragSelect) return
+      const { x1, x2 } = dragSelect
+      commitSelection(Math.min(x1, x2), Math.max(x1, x2))
+    },
+    [dragSelect, touchDraft, touchRegionAdjustMode, tool, hasDataOnly, activeSpectrumId, commitSelection]
+  )
+
+  const handleCanvasPointerLeave = useCallback((e) => {
+    if (e?.pointerType === 'touch' && (touchDraft || touchPoint1Ref.current !== null)) {
+      return
+    }
+    if (!touchRegionAdjustMode) {
+      if (dragSelect) setDragSelect(null)
+      if (touchPoint1Ref.current !== null) {
+        touchPoint1Ref.current = null
+        setTouchPoint1Wavenumber(null)
+        setTouchFirstPointPlaced(false)
       }
     }
-    setDragSelect(null)
-  }, [dragSelect, hasDataOnly, tool, activeSpectrumId, spectra, updateSpectrum])
-
-  const handleCanvasMouseLeave = useCallback(() => {
-    if (dragSelect) setDragSelect(null)
     setDebugCursor(null)
-  }, [dragSelect])
+  }, [dragSelect, touchDraft, touchRegionAdjustMode])
+
+  const handleCanvasPointerCancel = useCallback(() => {
+    setTouchDraft(null)
+  }, [])
 
   const handleCanvasMouseMoveDebug = useCallback((e) => {
     if (!hasDataOnly) return
@@ -1041,13 +1131,22 @@ export default function StackingView() {
   }, [resetZoom])
 
   useEffect(() => {
+    touchPoint1Ref.current = null
+    setTouchPoint1Wavenumber(null)
+    setTouchFirstPointPlaced(false)
+    setTouchDraft(null)
+  }, [tool])
+
+  useEffect(() => {
     if (!dragSelect) return
-    const handleGlobalMouseUp = () => {
-      handleCanvasMouseUp()
+    const handleGlobalPointerUp = (e) => {
+      if (e.pointerType === 'touch') return
+      const { x1, x2 } = dragSelect
+      commitSelection(Math.min(x1, x2), Math.max(x1, x2))
     }
-    window.addEventListener('mouseup', handleGlobalMouseUp)
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp)
-  }, [dragSelect, handleCanvasMouseUp])
+    window.addEventListener('pointerup', handleGlobalPointerUp)
+    return () => window.removeEventListener('pointerup', handleGlobalPointerUp)
+  }, [dragSelect, commitSelection])
 
   const handleResizeStart = useCallback((e) => {
     e.preventDefault()
@@ -1273,10 +1372,6 @@ export default function StackingView() {
     return (
       <div className="app stacking-empty">
         <header className="header">
-          <nav className="nav-links">
-            <Link to="/" className="nav-link active">Spectra Stacking</Link>
-            <Link to="/background-remover" className="nav-link">Background Remover</Link>
-          </nav>
           <h1>Stack<span className="header-ir">IR</span></h1>
           <p className="subtitle">
             Choose a spectrum from the sample library or load your own JCAMP-DX files (.jdx, .dx).
@@ -1316,22 +1411,76 @@ export default function StackingView() {
     )
   }
 
+  const toolbarButtons = (
+    <>
+      <button
+        type="button"
+        onClick={() => setTool('zoom')}
+        className={`tool-btn ${tool === 'zoom' ? 'primary' : 'secondary'}`}
+        title="Zoom — Drag to zoom into a region (Z)"
+      >
+        <ZoomIcon size={14} />
+        <span>Zoom</span>
+      </button>
+      <button
+        type="button"
+        onClick={resetZoom}
+        disabled={!zoomRange && yMinOffset === 0}
+        className="tool-btn secondary"
+        title="Reset zoom and Y axis (F)"
+      >
+        <span>Reset zoom</span>
+      </button>
+      {hasDataOnly && (
+        <>
+          <button
+            type="button"
+            onClick={() => setTool('peak')}
+            className={`tool-btn ${tool === 'peak' ? 'primary' : 'secondary'}`}
+            title="Peak pick — Drag to add peaks (P)"
+          >
+            <PeakIcon size={14} />
+            <span>Peak pick</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTool('region')}
+            className={`tool-btn ${tool === 'region' ? 'primary' : 'secondary'}`}
+            title="Region — Drag to add shaded regions (R)"
+          >
+            <RegionIcon size={14} />
+            <span>Region</span>
+          </button>
+        </>
+      )}
+      <button type="button" onClick={() => setSettingsModalOpen(true)} className="tool-btn secondary btn-with-icon" title="Settings">
+        <SettingsIcon size={14} />
+        <span>Settings</span>
+      </button>
+      <button type="button" onClick={() => setExportModalOpen(true)} className="tool-btn primary btn-with-icon" title="Export stacked spectra">
+        <DownloadIcon size={14} />
+        <span>Export</span>
+      </button>
+    </>
+  )
+
   return (
     <div className="app stacking-view">
-      <header className="header">
-        <nav className="nav-links">
-          <Link to="/" className="nav-link active">Spectra Stacking</Link>
-          <Link to="/background-remover" className="nav-link">Background Remover</Link>
-        </nav>
+      <header className="header header-desktop">
         <h1>Stack<span className="header-ir">IR</span></h1>
         <p className="subtitle">
           Overlay and add annotations to your IR spectra.
         </p>
       </header>
 
+      <div className="mobile-tools-bar" aria-label="Tools">
+        <div className="toolbar-row">{toolbarButtons}</div>
+        <h1 className="mobile-tools-title">Stack<span className="header-ir">IR</span></h1>
+      </div>
+
       <div className="stacking-layout">
         <div className="stacking-main">
-          <div className="stacking-controls">
+          <div className="stacking-controls stacking-controls-desktop">
             <div className="control-group">
               <label>Overlay mode</label>
               <select
@@ -1355,68 +1504,29 @@ export default function StackingView() {
               )}
             </div>
 
-            <div className="toolbar-row">
-              <button
-                type="button"
-                onClick={() => setTool('zoom')}
-                className={`tool-btn ${tool === 'zoom' ? 'primary' : 'secondary'}`}
-                title="Zoom — Drag to zoom into a region (Z)"
-              >
-                <ZoomIcon size={14} />
-                <span>Zoom</span>
-              </button>
-              <button
-                type="button"
-                onClick={resetZoom}
-                disabled={!zoomRange && yMinOffset === 0}
-                className="tool-btn secondary"
-                title="Reset zoom and Y axis (F)"
-              >
-                <span>Reset zoom</span>
-              </button>
-              {hasDataOnly && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setTool('peak')}
-                    className={`tool-btn ${tool === 'peak' ? 'primary' : 'secondary'}`}
-                    title="Peak pick — Drag to add peaks (P)"
-                  >
-                    <PeakIcon size={14} />
-                    <span>Peak pick</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTool('region')}
-                    className={`tool-btn ${tool === 'region' ? 'primary' : 'secondary'}`}
-                    title="Region — Drag to add shaded regions (R)"
-                  >
-                    <RegionIcon size={14} />
-                    <span>Region</span>
-                  </button>
-                </>
-              )}
-              <button type="button" onClick={() => setSettingsModalOpen(true)} className="tool-btn secondary btn-with-icon" title="Settings">
-                <SettingsIcon size={14} />
-                <span>Settings</span>
-              </button>
-              <button type="button" onClick={() => setExportModalOpen(true)} className="tool-btn primary btn-with-icon" title="Export stacked spectra">
-                <DownloadIcon size={14} />
-                <span>Export</span>
-              </button>
-            </div>
+            <div className="toolbar-row">{toolbarButtons}</div>
           </div>
 
           <div
             ref={displayWrapRef}
             className="stacking-canvas-wrap"
-            style={hasDataOnly ? { aspectRatio: `800 / ${displayHeight}` } : undefined}
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={(e) => { handleCanvasMouseMove(e); handleCanvasMouseMoveDebug(e) }}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseLeave}
-            style={{ cursor: dragSelect ? 'crosshair' : 'default', position: 'relative' }}
+            style={{
+              ...(hasDataOnly ? { aspectRatio: `800 / ${displayHeight}` } : {}),
+              cursor: dragSelect ? 'crosshair' : 'default',
+              position: 'relative',
+              touchAction: tool === 'zoom' || tool === 'peak' || tool === 'region' ? 'none' : 'auto',
+            }}
+            onPointerDown={handleCanvasPointerDown}
+            onPointerMove={(e) => { handleCanvasPointerMove(e); handleCanvasMouseMoveDebug(e) }}
+            onPointerUp={handleCanvasPointerUp}
+            onPointerLeave={handleCanvasPointerLeave}
+            onPointerCancel={handleCanvasPointerCancel}
           >
+            {hasDataOnly && touchFirstPointPlaced && !touchRegionAdjustMode && (tool === 'zoom' || tool === 'peak' || tool === 'region') && (
+              <div className="touch-hint-overlay" aria-live="polite">
+                {tool === 'region' ? 'Touch for right boundary' : 'Touch for second point'}
+              </div>
+            )}
             {hasDataOnly && showWavenumberBox && debugCursor && (
               <>
                 <div
@@ -1462,6 +1572,17 @@ export default function StackingView() {
                 height={displayHeight}
                 zoomRange={zoomRange}
                 dragSelect={dragSelect}
+                touchBoundaryWavenumbers={
+                  (tool === 'zoom' || tool === 'peak' || tool === 'region') && (touchDraft || touchPoint1Wavenumber != null)
+                    ? touchDraft?.isFirst
+                      ? [touchDraft.x]
+                      : touchPoint1Wavenumber != null && touchDraft
+                        ? [touchPoint1Wavenumber, touchDraft.x]
+                        : touchPoint1Wavenumber != null
+                          ? [touchPoint1Wavenumber]
+                          : undefined
+                    : undefined
+                }
                 overlayMode={overlayMode}
                 distributedGap={distributedGap}
                 normalizeY={normalizeY}
@@ -1477,6 +1598,96 @@ export default function StackingView() {
                 className="stacking-canvas"
                 style={{ background: '#ffffff' }}
               />
+            )}
+            {touchRegionAdjustMode && dragSelect && hasDataOnly && (
+              <div className="touch-region-adjust" role="region" aria-label="Adjust region boundaries">
+                <div className="touch-region-adjust-row">
+                  <span className="touch-region-adjust-label">Left</span>
+                  <button
+                    type="button"
+                    className="touch-region-adjust-btn"
+                    onClick={() => setDragSelect((prev) => {
+                      if (!prev) return prev
+                      const left = Math.min(prev.x1, prev.x2)
+                      const right = Math.max(prev.x1, prev.x2)
+                      const newLeft = Math.max(TARGET_WAVENUMBER_MIN, left - REGION_ADJUST_STEP)
+                      return { x1: newLeft, x2: right }
+                    })}
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    className="touch-region-adjust-btn"
+                    onClick={() => setDragSelect((prev) => {
+                      if (!prev) return prev
+                      const left = Math.min(prev.x1, prev.x2)
+                      const right = Math.max(prev.x1, prev.x2)
+                      const newLeft = Math.min(right - REGION_ADJUST_STEP, left + REGION_ADJUST_STEP)
+                      return { x1: newLeft, x2: right }
+                    })}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="touch-region-adjust-row">
+                  <span className="touch-region-adjust-label">Right</span>
+                  <button
+                    type="button"
+                    className="touch-region-adjust-btn"
+                    onClick={() => setDragSelect((prev) => {
+                      if (!prev) return prev
+                      const left = Math.min(prev.x1, prev.x2)
+                      const right = Math.max(prev.x1, prev.x2)
+                      const newRight = Math.max(left + REGION_ADJUST_STEP, right - REGION_ADJUST_STEP)
+                      return { x1: left, x2: newRight }
+                    })}
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    className="touch-region-adjust-btn"
+                    onClick={() => setDragSelect((prev) => {
+                      if (!prev) return prev
+                      const left = Math.min(prev.x1, prev.x2)
+                      const right = Math.max(prev.x1, prev.x2)
+                      const newRight = Math.min(TARGET_WAVENUMBER_MAX, right + REGION_ADJUST_STEP)
+                      return { x1: left, x2: newRight }
+                    })}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="touch-region-adjust-actions">
+                  <button
+                    type="button"
+                    className="touch-region-adjust-confirm primary"
+                    onClick={() => {
+                      if (dragSelect) {
+                        const left = Math.min(dragSelect.x1, dragSelect.x2)
+                        const right = Math.max(dragSelect.x1, dragSelect.x2)
+                        commitSelection(left, right)
+                      }
+                    }}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    className="touch-region-adjust-cancel secondary"
+                    onClick={() => {
+                      setDragSelect(null)
+                      setTouchRegionAdjustMode(false)
+                      setTouchFirstPointPlaced(false)
+                      setTouchPoint1Wavenumber(null)
+                      touchPoint1Ref.current = null
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             )}
           </div>
           <div className="reference-scale-bar">
@@ -1530,7 +1741,6 @@ export default function StackingView() {
           title="Drag to resize"
         />
         <div className="stacking-sidebar" style={{ width: sidebarWidth }}>
-          <div className="sidebar-header">Spectra</div>
           <div className="sidebar-tabs">
             <button
               type="button"
@@ -1571,9 +1781,8 @@ export default function StackingView() {
                 Add JCAMP-DX file
               </button>
               {jdxError && <div className="error" style={{ fontSize: '0.75rem' }}>{jdxError}</div>}
-            </>
-          )}
-          {sidebarTab === 'spectra' && spectra.map((s, i) => (
+              <div className="spectra-list">
+                {spectra.map((s, i) => (
             <div key={s.id} className={`spectrum-item ${visibleIds.has(s.id) ? 'visible' : ''} ${activeSpectrumId === s.id ? 'active-spectrum' : ''}`}>
               <div className="spectrum-toggle-row">
                 <button
@@ -1925,6 +2134,9 @@ export default function StackingView() {
               )}
             </div>
           ))}
+              </div>
+            </>
+          )}
           {sidebarTab === 'archive' && (
             <div className="archive-list">
               {archivedSpectra.length === 0 ? (
