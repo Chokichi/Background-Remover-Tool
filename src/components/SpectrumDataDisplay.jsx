@@ -40,6 +40,7 @@ export function SpectrumDataDisplay({
   height = 400,
   zoomRange = null,
   dragSelect = null,
+  touchBoundaryWavenumbers = null,
   overlayMode = 'stacked',
   distributedGap = 40,
   normalizeY = false,
@@ -406,6 +407,16 @@ export function SpectrumDataDisplay({
 
   const viewBox = `0 0 ${width} ${totalHeight}`
 
+  const touchBoundaryLines = useMemo(() => {
+    if (!touchBoundaryWavenumbers?.length) return []
+    return touchBoundaryWavenumbers.map((w) => {
+      const clamped = Math.max(wavenumberMin, Math.min(wavenumberMax, w))
+      const norm = wavenumberToNormX(clamped, wavenumberMin, wavenumberMax)
+      const px = PAD_LEFT + norm * plotW
+      return { x: px }
+    })
+  }, [touchBoundaryWavenumbers, wavenumberMin, wavenumberMax, plotW])
+
   const dragOverlay = useMemo(() => {
     if (!dragSelect) return null
     const { x1, x2 } = dragSelect
@@ -561,6 +572,18 @@ export function SpectrumDataDisplay({
           pointerEvents="none"
         />
       )}
+      {touchBoundaryLines.map((line, i) => (
+        <line
+          key={`touch-boundary-${i}`}
+          x1={line.x}
+          y1={labelsTop}
+          x2={line.x}
+          y2={labelsTop + plotH}
+          stroke="rgba(0, 100, 255, 0.9)"
+          strokeWidth={2}
+          pointerEvents="none"
+        />
+      ))}
       <g className="peak-lines-layer">
         {peakGroupBrackets.map((b, i) => (
           <g key={`bracket-lines-${b.specId}-${i}`}>

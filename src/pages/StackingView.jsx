@@ -600,7 +600,9 @@ export default function StackingView() {
   const [tool, setTool] = useState('zoom')
   const [activeSpectrumId, setActiveSpectrumId] = useState(null)
   const touchPoint1Ref = useRef(null)
+  const [touchPoint1Wavenumber, setTouchPoint1Wavenumber] = useState(null)
   const [touchFirstPointPlaced, setTouchFirstPointPlaced] = useState(false)
+  const [touchDraft, setTouchDraft] = useState(null)
   const [touchRegionAdjustMode, setTouchRegionAdjustMode] = useState(false)
   const REGION_ADJUST_STEP = 5
   const [expandedPeakListId, setExpandedPeakListId] = useState(null)
@@ -998,20 +1000,9 @@ export default function StackingView() {
       if (isTouch) {
         if (touchRegionAdjustMode) return
         if (touchPoint1Ref.current === null) {
-          touchPoint1Ref.current = x
-          setTouchFirstPointPlaced(true)
+          setTouchDraft({ x, isFirst: true })
         } else {
-          const x1 = touchPoint1Ref.current
-          touchPoint1Ref.current = null
-          setTouchFirstPointPlaced(false)
-          const left = Math.min(x1, x)
-          const right = Math.max(x1, x)
-          if (tool === 'region' && hasDataOnly && activeSpectrumId) {
-            setDragSelect({ x1: left, x2: right })
-            setTouchRegionAdjustMode(true)
-          } else {
-            commitSelection(left, right)
-          }
+          setTouchDraft({ x, isFirst: false })
         }
       } else {
         if (hasDataOnly && (tool === 'zoom' || ((tool === 'peak' || tool === 'region') && activeSpectrumId))) {
@@ -1028,27 +1019,52 @@ export default function StackingView() {
       tool,
       hasDataOnly,
       activeSpectrumId,
-      commitSelection,
     ]
   )
 
   const handleCanvasPointerMove = useCallback(
     (e) => {
-      if (e.pointerType === 'touch') return
+      if (e.pointerType === 'touch') {
+        if (touchDraft) {
+          const x = getXFromClient(e.clientX, e.clientY)
+          if (x != null) setTouchDraft((prev) => prev ? { ...prev, x } : null)
+        }
+        return
+      }
       if (!dragSelect) return
       const x = getXFromClient(e.clientX, e.clientY)
       if (x != null) setDragSelect((prev) => ({ ...prev, x2: x }))
     },
-    [dragSelect, getXFromClient]
+    [dragSelect, touchDraft, getXFromClient]
   )
 
   const handleCanvasPointerUp = useCallback(
     (e) => {
       if (e.pointerType === 'touch') {
         if (touchRegionAdjustMode) return
-        if (touchPoint1Ref.current !== null) {
-          touchPoint1Ref.current = null
-          setTouchFirstPointPlaced(false)
+        if (touchDraft) {
+          const { x, isFirst } = touchDraft
+          setTouchDraft(null)
+          if (isFirst) {
+            touchPoint1Ref.current = x
+            setTouchPoint1Wavenumber(x)
+            setTouchFirstPointPlaced(true)
+          } else {
+            const x1 = touchPoint1Ref.current
+            if (x1 != null) {
+              touchPoint1Ref.current = null
+              setTouchPoint1Wavenumber(null)
+              setTouchFirstPointPlaced(false)
+              const left = Math.min(x1, x)
+              const right = Math.max(x1, x)
+              if (tool === 'region' && hasDataOnly && activeSpectrumId) {
+                setDragSelect({ x1: left, x2: right })
+                setTouchRegionAdjustMode(true)
+              } else {
+                commitSelection(left, right)
+              }
+            }
+          }
         }
         return
       }
@@ -1056,19 +1072,27 @@ export default function StackingView() {
       const { x1, x2 } = dragSelect
       commitSelection(Math.min(x1, x2), Math.max(x1, x2))
     },
-    [dragSelect, touchRegionAdjustMode, commitSelection]
+    [dragSelect, touchDraft, touchRegionAdjustMode, tool, hasDataOnly, activeSpectrumId, commitSelection]
   )
 
-  const handleCanvasPointerLeave = useCallback(() => {
+  const handleCanvasPointerLeave = useCallback((e) => {
+    if (e?.pointerType === 'touch' && (touchDraft || touchPoint1Ref.current !== null)) {
+      return
+    }
     if (!touchRegionAdjustMode) {
       if (dragSelect) setDragSelect(null)
       if (touchPoint1Ref.current !== null) {
         touchPoint1Ref.current = null
+        setTouchPoint1Wavenumber(null)
         setTouchFirstPointPlaced(false)
       }
     }
     setDebugCursor(null)
-  }, [dragSelect, touchRegionAdjustMode])
+  }, [dragSelect, touchDraft, touchRegionAdjustMode])
+
+  const handleCanvasPointerCancel = useCallback(() => {
+    setTouchDraft(null)
+  }, [])
 
   const handleCanvasMouseMoveDebug = useCallback((e) => {
     if (!hasDataOnly) return
@@ -1107,22 +1131,22 @@ export default function StackingView() {
   }, [resetZoom])
 
   useEffect(() => {
+    touchPoint1Ref.current = null
+    setTouchPoint1Wavenumber(null)
+    setTouchFirstPointPlaced(false)
+    setTouchDraft(null)
+  }, [tool])
+
+  useEffect(() => {
     if (!dragSelect) return
     const handleGlobalPointerUp = (e) => {
-      if (e.pointerType === 'touch' && touchRegionAdjustMode) return
-      if (e.pointerType === 'touch') {
-        if (touchPoint1Ref.current !== null) {
-          touchPoint1Ref.current = null
-          setTouchFirstPointPlaced(false)
-        }
-        return
-      }
+      if (e.pointerType === 'touch') return
       const { x1, x2 } = dragSelect
       commitSelection(Math.min(x1, x2), Math.max(x1, x2))
     }
     window.addEventListener('pointerup', handleGlobalPointerUp)
     return () => window.removeEventListener('pointerup', handleGlobalPointerUp)
-  }, [dragSelect, touchRegionAdjustMode, commitSelection])
+  }, [dragSelect, commitSelection])
 
   const handleResizeStart = useCallback((e) => {
     e.preventDefault()
@@ -1496,7 +1520,7 @@ export default function StackingView() {
             onPointerMove={(e) => { handleCanvasPointerMove(e); handleCanvasMouseMoveDebug(e) }}
             onPointerUp={handleCanvasPointerUp}
             onPointerLeave={handleCanvasPointerLeave}
-            onPointerCancel={handleCanvasPointerLeave}
+            onPointerCancel={handleCanvasPointerCancel}
           >
             {hasDataOnly && touchFirstPointPlaced && !touchRegionAdjustMode && (tool === 'zoom' || tool === 'peak' || tool === 'region') && (
               <div className="touch-hint-overlay" aria-live="polite">
@@ -1548,6 +1572,17 @@ export default function StackingView() {
                 height={displayHeight}
                 zoomRange={zoomRange}
                 dragSelect={dragSelect}
+                touchBoundaryWavenumbers={
+                  (tool === 'zoom' || tool === 'peak' || tool === 'region') && (touchDraft || touchPoint1Wavenumber != null)
+                    ? touchDraft?.isFirst
+                      ? [touchDraft.x]
+                      : touchPoint1Wavenumber != null && touchDraft
+                        ? [touchPoint1Wavenumber, touchDraft.x]
+                        : touchPoint1Wavenumber != null
+                          ? [touchPoint1Wavenumber]
+                          : undefined
+                    : undefined
+                }
                 overlayMode={overlayMode}
                 distributedGap={distributedGap}
                 normalizeY={normalizeY}
@@ -1645,6 +1680,7 @@ export default function StackingView() {
                       setDragSelect(null)
                       setTouchRegionAdjustMode(false)
                       setTouchFirstPointPlaced(false)
+                      setTouchPoint1Wavenumber(null)
                       touchPoint1Ref.current = null
                     }}
                   >
