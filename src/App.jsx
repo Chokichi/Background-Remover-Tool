@@ -11,8 +11,8 @@ export default function App() {
       <BackgroundRemoverProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<BackgroundRemover />} />
-            <Route path="/stacking" element={<StackingView />} />
+            <Route path="/" element={<StackingView />} />
+            <Route path="/background-remover" element={<BackgroundRemover />} />
           </Routes>
         </BrowserRouter>
       </BackgroundRemoverProvider>

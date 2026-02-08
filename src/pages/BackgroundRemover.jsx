@@ -344,8 +344,8 @@ export default function BackgroundRemover() {
     <div className="app">
       <header className="header">
         <nav className="nav-links">
-          <Link to="/" className="nav-link active">Background Remover</Link>
-          <Link to="/stacking" className="nav-link">Spectra Stacking</Link>
+          <Link to="/" className="nav-link">Spectra Stacking</Link>
+          <Link to="/background-remover" className="nav-link active">Background Remover</Link>
         </nav>
         <h1>Chroma Key Background Remover</h1>
         <p className="subtitle">

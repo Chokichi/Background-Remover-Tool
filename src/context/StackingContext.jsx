@@ -36,6 +36,7 @@ const StackingContext = createContext(null)
 export function StackingProvider({ children }) {
   const [spectra, setSpectra] = useState([])
   const [visibleIds, setVisibleIds] = useState(new Set())
+  const [archivedSpectra, setArchivedSpectra] = useState([])
 
   useEffect(() => {
     const loaded = loadFromStorage()
@@ -53,9 +54,9 @@ export function StackingProvider({ children }) {
   const [distributedGap, setDistributedGap] = useState(40)
   const [calibrationBgColor, setCalibrationBgColor] = useState('#ffffff')
 
-  const addSpectrum = useCallback(({ dataUrl, fileName }) => {
+  const addSpectrum = useCallback(({ dataUrl, data, fileName, ...rest }) => {
     const id = crypto.randomUUID()
-    setSpectra((prev) => [...prev, { id, dataUrl, fileName }])
+    setSpectra((prev) => [...prev, { id, dataUrl, data, fileName, ...rest }])
     setVisibleIds((prev) => new Set([...prev, id]))
     return id
   }, [])
@@ -77,6 +78,24 @@ export function StackingProvider({ children }) {
       next.delete(id)
       return next
     })
+  }, [])
+
+  const archiveSpectrum = useCallback((id) => {
+    const spec = spectra.find((s) => s.id === id)
+    if (!spec) return
+    setSpectra((prev) => prev.filter((s) => s.id !== id))
+    setVisibleIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+    setArchivedSpectra((prev) => [...prev, spec])
+  }, [spectra])
+
+  const restoreSpectrum = useCallback((spec) => {
+    setArchivedSpectra((prev) => prev.filter((s) => s.id !== spec.id))
+    setSpectra((prev) => [...prev, spec])
+    setVisibleIds((prev) => new Set([...prev, spec.id]))
   }, [])
 
   const toggleVisible = useCallback((id) => {
@@ -107,6 +126,7 @@ export function StackingProvider({ children }) {
   const value = {
     spectra,
     visibleIds,
+    archivedSpectra,
     overlayMode,
     setOverlayMode,
     distributedGap,
@@ -116,6 +136,8 @@ export function StackingProvider({ children }) {
     addSpectrum,
     addSpectra,
     removeSpectrum,
+    archiveSpectrum,
+    restoreSpectrum,
     toggleVisible,
     updateSpectrum,
     clearSpectra,

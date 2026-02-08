@@ -1,8 +1,32 @@
 .app {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  justify-content: center;
+}
+
+.nav-link {
+  color: var(--subtitle);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.nav-link:hover {
+  color: var(--accent);
+}
+
+.nav-link.active {
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .header {
@@ -11,15 +35,15 @@
 }
 
 .header h1 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.4rem;
   letter-spacing: -0.02em;
 }
 
 .subtitle {
   color: var(--subtitle);
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   margin: 0;
   line-height: 1.5;
 }
@@ -92,7 +116,7 @@
 }
 
 .control-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .control-group:last-of-type {
@@ -125,9 +149,9 @@
 
 .control-group label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
 }
 
 .color-row {
@@ -179,6 +203,7 @@
   font-size: 0.75rem;
   color: var(--subtitle);
   display: block;
+  line-height: 1.35;
 }
 
 .actions {
@@ -208,6 +233,15 @@
 
 .ghost:hover {
   color: inherit;
+}
+
+button.small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8125rem;
+}
+
+.full {
+  width: 100%;
 }
 
 .preview-area {

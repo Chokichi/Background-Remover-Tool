@@ -1,26 +1,4 @@
 /* Uses shared App.css for most styles */
-.nav-links {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  justify-content: center;
-}
-
-.nav-link {
-  color: var(--subtitle);
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.nav-link:hover {
-  color: var(--accent);
-}
-
-.nav-link.active {
-  color: var(--accent);
-  font-weight: 500;
-}
-
 .file-bar {
   display: flex;
   align-items: center;
