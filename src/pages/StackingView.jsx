@@ -1277,15 +1277,15 @@ export default function StackingView() {
             <Link to="/" className="nav-link active">Spectra Stacking</Link>
             <Link to="/background-remover" className="nav-link">Background Remover</Link>
           </nav>
-          <h1>Spectra Stacking</h1>
+          <h1>Stack<span className="header-ir">IR</span></h1>
           <p className="subtitle">
-            Add spectra from Background Remover or load JCAMP-DX files (.jdx).
+            Choose a spectrum from the sample library or load your own JCAMP-DX files (.jdx, .dx).
           </p>
           <div className="empty-actions">
             <button
               type="button"
               onClick={() => setSampleLibraryOpen(true)}
-              className="secondary"
+              className="secondary empty-action-btn"
             >
               Sample library
             </button>
@@ -1299,11 +1299,10 @@ export default function StackingView() {
             <button
               type="button"
               onClick={() => jdxInputRef.current?.click()}
-              className="primary"
+              className="primary empty-action-btn"
             >
               Add JCAMP-DX file
             </button>
-            <Link to="/background-remover" className="secondary">Go to Background Remover</Link>
           </div>
           {jdxError && <div className="error" style={{ marginTop: '1rem' }}>{jdxError}</div>}
         </header>
@@ -1324,9 +1323,9 @@ export default function StackingView() {
           <Link to="/" className="nav-link active">Spectra Stacking</Link>
           <Link to="/background-remover" className="nav-link">Background Remover</Link>
         </nav>
-        <h1>Spectra Stacking</h1>
+        <h1>Stack<span className="header-ir">IR</span></h1>
         <p className="subtitle">
-          Match scales, overlay spectra. Select 2 points on reference, then 2 matching points on each spectrum. Use Adjust for fine-tuning.
+          Overlay and add annotations to your IR spectra.
         </p>
       </header>
 
