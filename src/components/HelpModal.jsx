@@ -31,14 +31,13 @@ const HELP_CONTENT = {
         items: [
           { term: 'Zoom', desc: 'Drag on the plot to zoom into a region. Keyboard: Z.' },
           { term: 'Reset zoom', desc: 'Restore full view and reset Y-axis. Keyboard: F.' },
-          { term: 'Peak pick', desc: 'Drag to mark a peak. Automatically detects the local minimum. Keyboard: P.' },
           { term: 'Region', desc: 'Drag to add a shaded region between two wavenumbers. Keyboard: R.' },
         ],
       },
       {
         title: 'Touch / mobile',
         items: [
-          { term: 'Zoom, peak, or region', desc: 'Tap once to place the first point, then tap again (or drag) for the second point.' },
+          { term: 'Zoom or region', desc: 'Tap once to place the first point, then tap again (or drag) for the second point.' },
           { term: 'Region boundaries', desc: 'After placing a region, use Left ± and Right ± to adjust, then Confirm.' },
         ],
       },

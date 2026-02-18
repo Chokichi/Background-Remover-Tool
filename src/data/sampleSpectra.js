@@ -8,7 +8,8 @@ import spectrum_1 from '../../sample-spectra/109-94-4-IR.jdx?raw'
 import spectrum_2 from '../../sample-spectra/111-36-4-IR.jdx?raw'
 import spectrum_3 from '../../sample-spectra/119-36-8-IR.jdx?raw'
 import spectrum_4 from '../../sample-spectra/141-78-6-IR.jdx?raw'
-import spectrum_5 from '../../sample-spectra/6630-86-0-IR.jdx?raw'
+import spectrum_5 from '../../sample-spectra/592-42-7-IR.jdx?raw'
+import spectrum_6 from '../../sample-spectra/6630-86-0-IR.jdx?raw'
 
 export const SAMPLE_SPECTRA = [
   {
@@ -42,9 +43,15 @@ export const SAMPLE_SPECTRA = [
     jdxContent: spectrum_4,
   },
   {
+    id: '592-42-7',
+    name: '1,5-HEXADIENE',
+    casNumber: '592-42-7',
+    jdxContent: spectrum_5,
+  },
+  {
     id: '6630-86-0',
     name: 'BENZIL, PHENYLHYDRAZONE',
     casNumber: '6630-86-0',
-    jdxContent: spectrum_5,
+    jdxContent: spectrum_6,
   }
 ]

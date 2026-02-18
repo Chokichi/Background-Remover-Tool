@@ -18,7 +18,7 @@ export function parseJDX(text) {
   const y = Array.from(data.y)
   const minX = Math.min(...x)
   const maxX = Math.max(...x)
-  const rawYUnits = spectrum?.yUnits ?? block?.info?.YUNITS ?? ''
+  const rawYUnits = spectrum?.yUnits ?? block?.info?.YUNITS ?? block?.info?.YLABEL ?? ''
   const yUnits = typeof rawYUnits === 'string' ? rawYUnits.toUpperCase().trim() : ''
 
   return {

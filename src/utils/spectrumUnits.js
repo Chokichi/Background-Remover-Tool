@@ -2,21 +2,33 @@
  * Convert between absorbance (A) and transmittance (T).
  * A = -log10(T),  T = 10^(-A)
  * Transmittance is 0–1 (0–100%). Absorbance is 0 to ∞.
+ *
+ * JCAMP-DX uses ##YUNITS= to specify the Y-axis units.
+ * We match against the standard values explicitly.
  */
 
-const ABSORBANCE_KEYS = ['ABSORBANCE', 'A', 'ABS']
-const TRANSMITTANCE_KEYS = ['TRANSMITTANCE', 'TRANSMISSION', 'T', 'T%', '%T', 'PERCENT TRANSMITTANCE']
+const ABSORBANCE_VALUES = ['ABSORBANCE']
+const TRANSMITTANCE_VALUES = ['TRANSMITTANCE', 'TRANSMISSION', '% TRANSMITTANCE', '% TRANSMISSION']
+
+function normalizeUnits(s) {
+  if (!s || typeof s !== 'string') return ''
+  return s.toUpperCase().trim()
+}
+
+function matchesOneOf(normalized, values) {
+  if (!normalized) return false
+  return values.some((v) => normalized === v || normalized.startsWith(v + ' '))
+}
 
 export function isAbsorbance(yUnits) {
-  if (!yUnits || typeof yUnits !== 'string') return false
-  const u = yUnits.toUpperCase().trim()
-  return ABSORBANCE_KEYS.some((k) => u.includes(k))
+  const u = normalizeUnits(yUnits)
+  return matchesOneOf(u, ABSORBANCE_VALUES)
 }
 
 export function isTransmittance(yUnits) {
-  if (!yUnits || typeof yUnits !== 'string') return true
-  const u = yUnits.toUpperCase().trim()
-  return TRANSMITTANCE_KEYS.some((k) => u.includes(k))
+  const u = normalizeUnits(yUnits)
+  if (!u) return true
+  return matchesOneOf(u, TRANSMITTANCE_VALUES)
 }
 
 /** Convert absorbance to transmittance (0–1). */

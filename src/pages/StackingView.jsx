@@ -1139,9 +1139,6 @@ export default function StackingView() {
       } else if (e.key === 'z' || e.key === 'Z') {
         e.preventDefault()
         setTool('zoom')
-      } else if (e.key === 'p' || e.key === 'P') {
-        e.preventDefault()
-        setTool('peak')
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault()
         setTool('region')
@@ -1469,15 +1466,7 @@ export default function StackingView() {
       </button>
       {hasDataOnly && (
         <>
-          <button
-            type="button"
-            onClick={() => setTool('peak')}
-            className={`tool-btn ${tool === 'peak' ? 'primary' : 'secondary'}`}
-            title="Peak pick — Drag to add peaks (P)"
-          >
-            <PeakIcon size={14} />
-            <span>Peak pick</span>
-          </button>
+          {/* Peak pick temporarily removed - code preserved in commitSelection, findLocalMinima/Maxima */}
           <button
             type="button"
             onClick={() => setTool('region')}
@@ -1843,7 +1832,7 @@ export default function StackingView() {
                       checked={activeSpectrumId === s.id}
                       onChange={() => setActiveSpectrumId(s.id)}
                     />
-                    <span className="spectrum-active-dot" title="Active for peak picking and region selection" />
+                    <span className="spectrum-active-dot" title="Active for region selection" />
                   </label>
                 )}
                 <span className="spectrum-color" style={{ background: SPECTRUM_COLORS[i % SPECTRUM_COLORS.length] }} />
@@ -1959,7 +1948,7 @@ export default function StackingView() {
                   {expandedPeakListId === s.id && (
                     <div className="peak-list">
                       {(s.peaks ?? []).length === 0 && (s.regions ?? []).length === 0 ? (
-                        <div className="peak-list-empty">No peaks or regions. Use Peak pick (P) or Region (R) and drag on the plot.</div>
+                        <div className="peak-list-empty">No peaks or regions. Use Region (R) and drag on the plot.</div>
                       ) : (
                         <>
                           {(() => {
