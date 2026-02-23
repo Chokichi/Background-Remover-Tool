@@ -1,0 +1,233 @@
+.jcamp-editor {
+  max-width: 900px;
+}
+
+/* Allow JCAMP editor page to scroll on smaller viewports (App.css uses overflow:hidden) */
+@media (max-width: 900px) {
+  .app.jcamp-editor {
+    overflow: auto;
+    height: auto;
+    max-height: none;
+  }
+}
+
+.jcamp-editor-upload {
+  margin-bottom: 1.5rem;
+}
+
+.jcamp-editor-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Stack vertically at moderate widths so metadata has full width */
+@media (max-width: 950px) {
+  .jcamp-editor-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jcamp-metadata-section,
+.jcamp-data-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 0; /* allow grid item to shrink so overflow scroll works */
+}
+
+.jcamp-metadata-section {
+  overflow-x: auto; /* horizontal scroll when keys/values need more space */
+}
+
+.jcamp-metadata-section h2,
+.jcamp-data-section h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.jcamp-data-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.jcamp-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.jcamp-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jcamp-entry-key {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-family: monospace;
+  color: var(--subtitle);
+  min-width: 10rem;
+}
+
+.jcamp-entry-value {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.jcamp-entry-multiline {
+  align-items: flex-start;
+}
+
+.jcamp-entry-value-textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.jcamp-remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.jcamp-raw-line {
+  font-size: 0.8125rem;
+  color: var(--subtitle);
+  font-style: italic;
+  padding: 0.25rem 0;
+}
+
+.jcamp-audit-trail-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.jcamp-audit-trail-section h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.jcamp-audit-trail-hint {
+  font-size: 0.8125rem;
+  color: var(--subtitle);
+  margin: 0 0 0.5rem;
+}
+
+.jcamp-audit-trail-display {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  max-height: 220px;
+  resize: vertical;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-family: monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: auto;
+  margin-bottom: 0.75rem;
+  color: var(--subtitle);
+}
+
+.jcamp-audit-trail-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.jcamp-audit-trail-input {
+  min-height: 100px;
+  resize: vertical;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.jcamp-add-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.jcamp-add-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.jcamp-add-key,
+.jcamp-add-value {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.jcamp-add-key {
+  min-width: 12rem;
+}
+
+.jcamp-add-value {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.jcamp-format-guide {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--subtitle);
+  line-height: 1.4;
+}
+
+.jcamp-entry-key {
+  cursor: help;
+}
+
+.jcamp-data-preview {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  max-height: min(360px, 45vh);
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  font-family: monospace;
+  background: var(--bg);
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+  overflow: auto;
+  margin: 0 0 0.5rem;
+}
+
+.jcamp-data-hint {
+  font-size: 0.8125rem;
+  color: var(--subtitle);
+  margin: 0;
+}
+
+.jcamp-editor-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-start;
+}

@@ -788,6 +788,22 @@
   margin-bottom: 0.25rem;
 }
 
+.settings-modal-footer-link {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border, #eee);
+}
+
+.settings-footer-link {
+  font-size: 0.875rem;
+  color: var(--accent, #0066cc);
+  text-decoration: none;
+}
+
+.settings-footer-link:hover {
+  text-decoration: underline;
+}
+
 .settings-modal-footer {
   display: flex;
   justify-content: flex-end;

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import { useStacking } from '../context/StackingContext'
 import {
@@ -513,6 +514,11 @@ function SettingsModal({
           {!hasDataOnly && (
             <span className="settings-modal-hint">These settings apply when viewing JCAMP-DX spectra.</span>
           )}
+          <div className="settings-modal-footer-link">
+            <Link to="/jcamp-editor" onClick={onClose} className="settings-footer-link">
+              JCAMP-DX file editor
+            </Link>
+          </div>
         </div>
         <div className="settings-modal-footer">
           <button type="button" onClick={onClose} className="primary">Done</button>
