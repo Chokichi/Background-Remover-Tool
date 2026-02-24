@@ -547,6 +547,14 @@ function SampleLibraryModal({ onAddSpectrum, onClose }) {
   const listRef = useRef(null)
 
   useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
+  useEffect(() => {
     if (!infoOpenId) return
     const onDocClick = () => {
       setInfoOpenId(null)
